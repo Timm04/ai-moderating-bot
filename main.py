@@ -9,12 +9,11 @@ from bot.bot import AMABot
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX")
-COGS_FOLDER = "cogs"
-EVENTS_FOLDER = "events"
-MODERATION_FOLDER = "moderation"
-RULES_FOLDER = "rules"
-LEARNING_FOLDER = "learning"
-
+COGS_FOLDER = "bot/cogs"
+EVENTS_FOLDER = "bot/events"
+MODERATION_FOLDER = "bot/moderation"
+RULES_FOLDER = "bot/rules"
+LEARNING_FOLDER = "bot/learning"
 
 bot = AMABot(command_prefix=COMMAND_PREFIX,
              cogs_folder=COGS_FOLDER,

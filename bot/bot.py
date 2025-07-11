@@ -24,10 +24,14 @@ class AMABot(commands.Bot):
 
     async def on_ready(self):
         _log.info(f"Logged in as {self.user}")
-        await self.create_debug_dm()
 
     async def setup_hook(self):
         self.tree.on_error = self.on_application_command_error
+
+    async def on_application_command_error(
+        self, interaction: discord.Interaction, error: Exception
+    ) -> None:
+        _log.exception("Application command error: %s", error)
 
     async def load_cogs(self, cogs_to_load):
 
@@ -39,19 +43,6 @@ class AMABot(commands.Bot):
             cog = f"{self.cog_folder}.{cog[:-3]}"
             await self.load_extension(cog)
             print(f"Loaded {cog}")
-
-    async def create_debug_dm(self):
-        await self.wait_until_ready()
-        debug_user_id = int(os.getenv("DEBUG_USER"))
-        debug_user = self.get_user(debug_user_id)
-        if not debug_user:
-            debug_user = await self.fetch_user(debug_user_id)
-
-        self.debug_dm = debug_user.dm_channel
-        if not debug_user.dm_channel:
-            self.debug_dm = await debug_user.create_dm()
-
-        await self.debug_dm.send("Bot is ready.")
 
     async def on_command_error(self, ctx: commands.Context,
                                error: commands.CommandError) -> None:
@@ -72,9 +63,5 @@ class AMABot(commands.Bot):
 
         error_message = f"`{error_type}` occurred in `{event_method}`\n" + \
             f"```{error}```"
-        embed_description = f"\n```python\n{traceback_string}```"
 
-        error_embed = discord.Embed(title="Error",
-                                    description=embed_description[:4000],
-                                    color=discord.Color.red())
-        await self.debug_dm.send(error_message, embed=error_embed)
+        _log.error(f"{error_message}: \n```python\n{traceback_string}```")
