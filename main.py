@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 import discord
 from bot.bot import AMABot
 
+from bot.learning.db import create_tables
+from bot.learning import async_session_maker
+
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -20,11 +23,13 @@ bot = AMABot(command_prefix=COMMAND_PREFIX,
              events_folder=EVENTS_FOLDER,
              moderation_folder=MODERATION_FOLDER,
              rules_folder=RULES_FOLDER,
-             learning_folder=LEARNING_FOLDER)
+             learning_folder=LEARNING_FOLDER,
+             db_session_maker=async_session_maker)
 
 
 async def main(cogs_to_load):
     discord.utils.setup_logging()
+    await create_tables()
     await bot.load_cogs(cogs_to_load)
     await bot.start(TOKEN)
 

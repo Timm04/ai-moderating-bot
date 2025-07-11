@@ -14,13 +14,15 @@ class AMABot(commands.Bot):
                  events_folder,
                  moderation_folder,
                  rules_folder,
-                 learning_folder):
+                 learning_folder,
+                 db_session_maker):
 
         super().__init__(command_prefix=command_prefix,
                          intents=discord.Intents.all())
         self.cogs_folder = cogs_folder
         self.events_folder = events_folder
         self.moderation_folder = moderation_folder
+        self.db_session_maker = db_session_maker
 
     async def on_ready(self):
         _log.info(f"Logged in as {self.user}")
