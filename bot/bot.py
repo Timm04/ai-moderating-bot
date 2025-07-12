@@ -15,14 +15,18 @@ class AMABot(commands.Bot):
                  moderation_folder,
                  rules_folder,
                  learning_folder,
-                 db_session_maker):
+                 db_session_maker,
+                 cogs_path="bot.cogs"):
 
         super().__init__(command_prefix=command_prefix,
                          intents=discord.Intents.all())
         self.cogs_folder = cogs_folder
         self.events_folder = events_folder
         self.moderation_folder = moderation_folder
+        self.rules_folder = rules_folder
+        self.learning_folder = learning_folder
         self.db_session_maker = db_session_maker
+        self.cogs_path = cogs_path
 
     async def on_ready(self):
         _log.info(f"Logged in as {self.user}")
@@ -38,11 +42,11 @@ class AMABot(commands.Bot):
     async def load_cogs(self, cogs_to_load):
 
         cogs = [cog for cog in os.listdir(self.cogs_folder)
-                if cog.endswith(".py")
-                and (cogs_to_load == "*" or cog[:-3] in cogs_to_load)]
+                if cog.endswith(".py") and
+                (cogs_to_load == "*" or cog[:-3] in cogs_to_load)]
 
         for cog in cogs:
-            cog = f"{self.cog_folder}.{cog[:-3]}"
+            cog = f"{self.cogs_path}.{cog[:-3]}"
             await self.load_extension(cog)
             print(f"Loaded {cog}")
 

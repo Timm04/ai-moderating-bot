@@ -2,8 +2,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from sqlalchemy.future import select
-from rules.rule_model import Server, ModerationRule
-from learning import generate_embedding, async_session_maker
+from ..rules.rule_model import Server, ModerationRule
+from ..learning.db import async_session_maker
+from ..learning.embedding import generate_embedding
 
 
 class RuleManager(commands.Cog):
@@ -53,4 +54,4 @@ class RuleManager(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    bot.add_cog(RuleManager(bot, async_session_maker))
+    await bot.add_cog(RuleManager(bot, async_session_maker))
