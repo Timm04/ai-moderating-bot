@@ -3,13 +3,13 @@ services:
     image: postgres:15
     restart: always
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: timm2
+      POSTGRES_PASSWORD: dontforget3oct11escapethematrixniclasstaysolidrocky5801
       POSTGRES_DB: ai_bot_db
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5431:5431"
 
   bot:
     build: .
@@ -18,10 +18,10 @@ services:
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
       COMMAND_PREFIX: ${COMMAND_PREFIX}
-      DATABASE_URL: postgresql+asyncpg://user:password@db:5432/ai_bot_db
+      DATABASE_URL: postgresql+asyncpg://timm2:dontforget3oct11escapethematrixniclasstaysolidrocky5801@db:5431/ai_bot_db
     volumes:
       - .:/app
-    command: python bot/main.py
+    command: python main.py
 
 volumes:
   pgdata:

@@ -3,8 +3,8 @@ from discord.ext import commands
 
 
 def is_admin():
-    async def predicate(interaction: discord.Interaction) -> bool:
-        return interaction.user.guild_permissions.administrator
+    async def predicate(ctx: commands.Context) -> bool:
+        return ctx.author.guild_permissions.administrator
     return commands.check(predicate)
 
 

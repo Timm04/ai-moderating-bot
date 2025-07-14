@@ -30,8 +30,9 @@ bot = AMABot(command_prefix=COMMAND_PREFIX,
 async def main(cogs_to_load):
     discord.utils.setup_logging()
     await bot.load_cogs(cogs_to_load)
-    await bot.start(TOKEN)
     await create_tables()
+    await bot.start(TOKEN)
+    await bot.tree.sync()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AI Moderation Bot")
