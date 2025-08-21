@@ -1,9 +1,9 @@
 import logging
 from sqlalchemy.future import select
-from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
-from bot.rules.rule_model import Server, ModerationRule, FlaggedMessage, FlaggedMessageVote
+from bot.rules.rule_model import ModerationRule, FlaggedMessage, FlaggedMessageVote, ServerConfiguration
 from ..learning.db import async_session_maker
+import numpy as np
 
 _log = logging.getLogger(__name__)
 
@@ -29,6 +29,20 @@ async def get_feedback_similarities(server_id: int, approved: bool) -> list[floa
     return similarities
 
 
+async def set_server_threshold(server_id: int, threshold: float) -> None:
+    """
+    Set the similarity threshold for a server.
+    """
+    async with async_session_maker() as session:
+        cfg = (await session.execute(
+            select(ServerConfiguration).where(ServerConfiguration.server_id == server_id)
+        )).scalar_one_or_none()
+        if cfg:
+            cfg.similarity_threshold = threshold
+            await session.commit()
+    _log.info(f"Updated server {server_id} similarity_threshold to {threshold:.3f}")
+
+
 async def update_server_threshold_from_feedback(server_id: int, percentile: int = 25) -> None:
     """
     Update the server's similarity_threshold based on feedback similarities.
@@ -41,9 +55,7 @@ async def update_server_threshold_from_feedback(server_id: int, percentile: int 
         _log.info(f"No approved feedback for server {server_id}, skipping threshold update.")
         return
 
-    import numpy as np
-
-    new_threshold = np.percentile(approved_scores, percentile)
+    new_threshold = float(np.percentile(approved_scores, percentile))
     _log.info(f"Computed new threshold={new_threshold:.3f} (percentile={percentile}) for server {server_id}")
 
     if rejected_scores:
@@ -53,12 +65,12 @@ async def update_server_threshold_from_feedback(server_id: int, percentile: int 
             _log.info(f"Adjusted new threshold to {new_threshold:.3f} to avoid false positives")
 
     async with async_session_maker() as session:
-        await session.execute(
-            update(Server)
-            .where(Server.id == server_id)
-            .values(similarity_threshold=new_threshold)
-        )
-        await session.commit()
+        cfg = (await session.execute(
+            select(ServerConfiguration).where(ServerConfiguration.server_id == server_id)
+        )).scalar_one_or_none()
+        if cfg:
+            cfg.similarity_threshold = new_threshold
+            await session.commit()
     _log.info(f"Updated server {server_id} similarity_threshold to {new_threshold:.3f}")
 
 

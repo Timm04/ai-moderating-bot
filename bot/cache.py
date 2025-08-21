@@ -1,58 +1,73 @@
-import torch
-import numpy as np
 from sqlalchemy.future import select
-from rules.rule_model import Server, ModerationRule
+from .rules.rule_model import Server, ModerationRule
+import torch
+import json
+import numpy as np
 
 
-async def get_server_rules_cached(self, guild_id: str):
-    key = f"server_rules:{guild_id}"
-    rules = await self.cache_get(key)
-    if rules is not None:
-        # Convert embeddings back to normalized tensors once on load
-        for r in rules:
-            emb = np.array(r["embedding_vector"], dtype=np.float32)
-            norm_emb = emb / np.linalg.norm(emb)
-            r["embedding_vector"] = torch.tensor(norm_emb)
-        return rules
+class Cache:
+    def __init__(self, redis_client, db_session_maker, prefix="msgmon"):
+        self.redis = redis_client
+        self.db_session_maker = db_session_maker
+        self.prefix = prefix
+        self.CACHE_TTL_SECONDS = 600
 
-    async with self.db_session_maker() as session:
-        result = await session.execute(select(Server).filter_by(discord_guild_id=guild_id))
-        server = result.scalars().first()
-        if not server:
-            return None
+    def _key(self, key: str) -> str:
+        return f"{self.prefix}:{key}"
 
-        result = await session.execute(select(ModerationRule).filter_by(server_id=server.id, active=True))
-        rules_orm = result.scalars().all()
+    async def get(self, key: str):
+        raw = await self.redis.get(self._key(key))
+        return None if raw is None else json.loads(raw)
 
-        rules_data = []
-        for r in rules_orm:
-            # Normalize embedding once before caching
-            emb = np.array(r.embedding_vector, dtype=np.float32)
-            norm_emb = emb / np.linalg.norm(emb)
-            rules_data.append({
-                "id": r.id,
-                "rule_text": r.rule_text,
-                "embedding_vector": norm_emb.tolist(),  # store normalized list
-            })
+    async def set(self, key: str, value, ttl: int):
+        await self.redis.set(self._key(key), json.dumps(value), ex=ttl)
 
-        await self.cache_set(key, rules_data, ttl=self.CACHE_TTL_SECONDS)
-        # Convert to tensors before returning
-        for r in rules_data:
-            r["embedding_vector"] = torch.tensor(r["embedding_vector"])
-        return rules_data
+    async def get_server_rules_cached(self, guild_id: int):
+        key = f"server_rules:{guild_id}"
+        rules = await self.get(key)
+        if rules is not None:
+            for r in rules:
+                emb = np.array(r["embedding_vector"], dtype=np.float64)
+                r["embedding_vector"] = torch.tensor(emb / np.linalg.norm(emb))
+            return rules
 
+        async with self.db_session_maker() as session:
+            server = (await session.execute(
+                select(Server).where(Server.discord_guild_id == int(guild_id))
+            )).scalar_one_or_none()
+            if not server:
+                return []
 
-async def get_server_threshold_cached(self, guild_id: str):
-    key = f"server_threshold:{guild_id}"
-    threshold = await self.cache_get(key)
-    if threshold is not None:
-        return float(threshold)
+            rules_orm = (await session.execute(
+                select(ModerationRule).where(ModerationRule.server_id == server.id,
+                                             ModerationRule.active.is_(True))
+            )).scalars().all()
 
-    async with self.db_session_maker() as session:
-        result = await session.execute(select(Server).filter_by(discord_guild_id=guild_id))
-        server = result.scalars().first()
-        if not server:
-            return 0.75  # default fallback
+            payload = []
+            for r in rules_orm:
+                emb = np.array(r.embedding_vector, dtype=np.float64)
+                payload.append({
+                    "id": r.id,
+                    "rule_text": r.rule_text,
+                    "embedding_vector": (emb / np.linalg.norm(emb)).tolist(),
+                })
+            await self.set(key, payload, ttl=self.CACHE_TTL_SECONDS)
+            for r in payload:
+                r["embedding_vector"] = torch.tensor(r["embedding_vector"])
+            return payload
 
-        await self.cache_set(key, server.similarity_threshold, ttl=self.CACHE_TTL_SECONDS)
-        return server.similarity_threshold
+    async def get_server_threshold_cached(self, guild_id: int):
+        key = f"server_threshold:{guild_id}"
+        data = await self.get(key)
+        if data is not None:
+            return float(data)
+
+        async with self.db_session_maker() as session:
+            server = (await session.execute(
+                select(Server).where(Server.discord_guild_id == int(guild_id))
+            )).scalar_one_or_none()
+            if not server or not server.configuration:
+                return 0.75
+            val = server.configuration.similarity_threshold
+            await self.set(key, val, ttl=self.CACHE_TTL_SECONDS)
+            return val

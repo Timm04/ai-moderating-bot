@@ -11,6 +11,9 @@ class Threshold(commands.Cog):
         self.bot = bot
         self.db_session_maker = db_session_maker
 
+    async def on_ready(self):
+        await self.bot.tree.sync()
+
     @app_commands.command(name="setthreshold", description="Set the similarity threshold for moderation (0.0 - 1.0).")
     @app_commands.describe(threshold="How strict should the rule matching be?")
     async def set_threshold(self, interaction: discord.Interaction, threshold: float):
@@ -20,14 +23,14 @@ class Threshold(commands.Cog):
 
         async with self.db_session_maker() as session:
             result = await session.execute(
-                select(Server).filter_by(discord_guild_id=str(interaction.guild_id))
+                select(Server).filter_by(discord_guild_id=int(interaction.guild_id))
             )
             server = result.scalars().first()
             if not server:
                 await interaction.response.send_message("This server is not yet initialized.", ephemeral=True)
                 return
 
-            server.similarity_threshold = threshold
+            server.configuration.similarity_threshold = threshold
             await session.commit()
 
         await interaction.response.send_message(f"Threshold updated to {threshold:.2f} ✅", ephemeral=True)

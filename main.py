@@ -8,6 +8,7 @@ from bot.bot import AMABot
 from bot.learning.db import create_tables
 from bot.learning import async_session_maker
 
+# pg_ctl -D "C:\Program Files\PostgreSQL\17\data" start
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
