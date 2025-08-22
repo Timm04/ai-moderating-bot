@@ -269,7 +269,7 @@ async def post_review_message(
         color=color
     )
     embed.add_field(name="Author", value=message.author.mention, inline=True)
-    embed.add_field(name="Rule Matched" if moderator_id is None else "Rule (initial)", value=picked_rule.rule_text, 
+    embed.add_field(name="Rule Matched" if moderator_id is None else "Rule (initial)", value=picked_rule.rule_text,
                     inline=False)
     if moderator_id:
         embed.add_field(name="Flagged By", value=f"<@{moderator_id}>", inline=True)
