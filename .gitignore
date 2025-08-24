@@ -1,0 +1,7 @@
+.env
+bot/__pycache__/
+*.py[cod]
+*$py.class
+pgdata/
+*.pyc
+.env.*
