@@ -4,4 +4,3 @@ bot/__pycache__/
 *$py.class
 pgdata/
 *.pyc
-.env.*
